@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from frozendict import frozendict
+import numpy as np
 from scipy import stats
 from uplift.ensemble import RandomForestClassifier
 from uplift.metrics import qini_q
@@ -11,24 +12,29 @@ from json_store import JsonWriter
 
 
 experiment_folder = Path('experiment') / 'experiment1'
-computed_jsons = experiment_folder / 'computed.jsons'
+computed_jsons = experiment_folder / 'computed.jsonl'
 
 
-def generator(frozen_rv):
-    return lambda seed: frozen_rv.rvs(1, random_state=seed)[0]
+def generator(frozen_rv, seed):
+    z = np.random.RandomState(seed=seed)
+    while True:
+        random_state = z.randint(low=0, high=2**32 - 1)
+        yield from frozen_rv.rvs(1000, random_state=random_state)
 
 
 def power(base, generator_):
-    return lambda seed: base ** generator_(seed)
+    for g in generator_:
+        yield base ** g
 
 
 def integer(generator_):
-    return lambda seed: int(generator_(seed))
+    for g in generator_:
+        yield int(g)
 
 
-hyperparameters = {'max_depth': integer(power(10, generator(stats.uniform(0, 3)))),
-                   'min_samples_split': integer(power(10, generator(stats.uniform(0, 3)))),
-                   'min_samples_leaf': integer(power(10, generator(stats.uniform(0, 3))))}
+hyperparameters = {'max_depth': integer(power(10, generator(stats.uniform(0, 3), seed=1))),
+                   'min_samples_split': integer(power(10, generator(stats.uniform(0, 3), seed=2))),
+                   'min_samples_leaf': integer(power(10, generator(stats.uniform(0, 3), seed=3)))}
 
 
 def parameters_to_compute():
@@ -37,14 +43,13 @@ def parameters_to_compute():
         for shuffle_seed in range(9):
             for n_estimators in [100, 1000]:
                 for criterion in ['uplift_gini', 'uplift_entropy']:
-                    for hp_seed in range(1000):
+                    for _ in range(1000):
 
                         yield {'dataset_id': dataset_id,
                                'shuffle_seed': shuffle_seed,
                                'n_estimators': n_estimators,
                                'criterion': criterion,
-                               'hp_seed': hp_seed,
-                               **{name: gen(hp_seed) for name, gen in hyperparameters.items()}}
+                               **{name: next(gen) for name, gen in hyperparameters.items()}}
 
 
 def compute_qini(parameters):
