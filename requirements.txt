@@ -1,4 +1,4 @@
--e https://github.com/psarka/uplift.git@v0.2#egg=uplift
+-e git+https://github.com/psarka/uplift.git@v0.2#egg=uplift
 
 frozendict==1.2
 pandas==0.23.4
