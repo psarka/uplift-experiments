@@ -39,7 +39,8 @@ hyperparameters = {'max_depth': integer(power(10, generator(stats.uniform(0, 3),
 
 def parameters_to_compute():
 
-    for dataset_id in ['dataset1']:
+    for dataset_id in ['dataset1',
+                       'dataset2']:
         for shuffle_seed in range(9):
             for n_estimators in [100, 1000]:
                 for criterion in ['uplift_gini', 'uplift_entropy']:
