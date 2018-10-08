@@ -32,25 +32,26 @@ def integer(generator_):
         yield int(g)
 
 
-hyperparameters = {'max_depth': integer(power(10, generator(stats.uniform(0, 3), seed=1))),
+hypergenerators = {'max_depth': integer(power(10, generator(stats.uniform(0, 3), seed=1))),
                    'min_samples_split': integer(power(10, generator(stats.uniform(0, 3), seed=2))),
                    'min_samples_leaf': integer(power(10, generator(stats.uniform(0, 3), seed=3)))}
+
+hyperparameters = [{name: next(gen) for name, gen in hypergenerators.items()} for _ in range(1000)]
 
 
 def parameters_to_compute():
 
-    for dataset_id in ['dataset1',
-                       'dataset2']:
+    for dataset_id in ['dataset1', 'dataset2']:
         for shuffle_seed in range(9):
             for n_estimators in [100, 1000]:
                 for criterion in ['uplift_gini', 'uplift_entropy']:
-                    for _ in range(1000):
+                    for params in hyperparameters:
 
                         yield {'dataset_id': dataset_id,
                                'shuffle_seed': shuffle_seed,
                                'n_estimators': n_estimators,
                                'criterion': criterion,
-                               **{name: next(gen) for name, gen in hyperparameters.items()}}
+                               **params}
 
 
 def compute_qini(parameters):
